@@ -2,11 +2,360 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Magic Website</title>
+  <title>Magic Trick Lockscreen</title>
+  <meta name="viewport" content="width=320, initial-scale=1.0, user-scalable=no">
+
+  <!-- PWA Support -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#202d44"/>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MagicLockscreen">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3064/3064197.png">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+      background: url('https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=720&q=80') center center / cover no-repeat;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      overflow: hidden;
+      position: relative;
+      transition: background 0.7s;
+    }
+    .overlay {
+      background: linear-gradient(120deg, rgba(30, 40, 80, 0.48) 10%, rgba(10, 18, 35, 0.8) 100%);
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1;
+    }
+    .lockscreen-container {
+      position: absolute;
+      top: 54%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px;
+      max-width: 96vw;
+      min-width: 230px;
+      text-align: center;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-display {
+      margin-bottom: 20px;
+      letter-spacing: 10px;
+      font-size: 2.2rem;
+      color: #fff;
+      text-shadow: 0 0 6px #002, 0 0 2px #0ff6;
+      user-select: none;
+      min-height: 44px;
+      text-align: center;
+      width: 100%;
+    }
+    .pin-number {
+      display: inline-block;
+      width: 26px;
+      text-align: center;
+      font-weight: 500;
+      font-size: 2.2rem;
+      color: #fff;
+      border-bottom: 2px solid #4cfada55;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .pin-number.empty {
+      color: #6fa6bb66;
+      border-color: transparent;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px 18px;
+      margin-bottom: 16px;
+      justify-items: center;
+      align-items: center;
+      width: 100%;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .key {
+      background: rgba(255,255,255,0.19);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      height: 58px;
+      width: 58px;
+      font-size: 1.6rem;
+      font-weight: 400;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.22);
+      outline: none;
+      transition: background 0.22s, box-shadow 0.16s, transform 0.11s, color 0.17s;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .key:active,
+    .key.clicked {
+      background: radial-gradient(circle at 60% 40%, #33aaff44 0%, #fff2 100%);
+      box-shadow: 0 0 18px #00ffe5cc, 0 2px 12px #000b;
+      color: #88faff;
+      transform: scale(0.95);
+    }
+    .key.cut {
+      font-size: 1.7rem;
+      color: #fff;
+      border: none;
+      background: rgba(255,255,255,0.19);
+    }
+    .key.ok {
+      background: #5a6fd6;
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .key.ok:active,
+    .key.ok.clicked {
+      background: #7ed9ce;
+      color: #202d44;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      color: #fff;
+      font-size: 1.1rem;
+      opacity: 0.8;
+      width: 100%;
+      max-width: 320px;
+    }
+    .status-msg {
+      height: 26px;
+      margin-bottom: 12px;
+      color: #fe5050;
+      font-weight: bold;
+      text-shadow: 0 1px 2px #000;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+      opacity: 0.95;
+      min-height: 20px;
+      text-align: center;
+    }
+    .secret-dot {
+      position: absolute;
+      top: 12px;
+      right: 17px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.28);
+      border: 2px solid rgba(255,255,255,0.19);
+      cursor: pointer;
+      z-index: 10;
+      transition: box-shadow 0.2s;
+      box-shadow: 0 0 4px #000a;
+      opacity: 0.63;
+    }
+    .secret-dot:hover {
+      background: #fff;
+      opacity: 0.95;
+      box-shadow: 0 0 10px #fff7, 0 0 6px #000a;
+    }
+    .reveal-popup {
+      position: fixed;
+      top: 40px;
+      right: 22px;
+      background: rgba(20,32,32,0.96);
+      color: #fff;
+      padding: 14px 22px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px #000a;
+      font-size: 1.35rem;
+      z-index: 999;
+      animation: fadeIn 0.3s;
+      letter-spacing: 4px;
+      text-align: center;
+      user-select: all;
+      min-width: 86px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-16px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    @media (max-width: 400px) {
+      .lockscreen-container { top: 51%; width: 99vw; }
+      .pin-display { font-size: 1.5rem;}
+      .key { height: 44px; width: 44px; font-size: 1.1rem;}
+      .pin-number { font-size: 1.5rem; width: 18px;}
+      .actions { font-size: 1rem;}
+    }
+  </style>
 </head>
 <body>
-  <h1>✨ Welcome to Magician Bhuvan Bhaskar’s Website ✨</h1>
-  <p>This is my first GitHub Pages website!</p>
+  <div class="overlay"></div>
+  <div class="secret-dot" id="secretDot" title="Magic Dot"></div>
+  <div class="lockscreen-container">
+    <div class="pin-display" id="pinDisplay"></div>
+    <div class="status-msg" id="statusMsg"></div>
+    <div class="keypad" id="keypad"></div>
+    <div class="actions">
+      <span id="emergencyBtn">EMERGENCY</span>
+      <span id="backBtn">Back</span>
+    </div>
+  </div>
+  <div class="reveal-popup" id="revealPopup" style="display:none;">
+    Secret PIN: <span id="revealedPin"></span>
+  </div>
+  <audio id="clickSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e1e5d.mp3" preload="auto"></audio>
+
+  <script>
+    let currentInput = "";
+    let savedPin = "";
+    const pinDisplay = document.getElementById('pinDisplay');
+    const statusMsg = document.getElementById('statusMsg');
+    const keypad = document.getElementById('keypad');
+    const revealPopup = document.getElementById('revealPopup');
+    const revealedPin = document.getElementById('revealedPin');
+    const secretDot = document.getElementById('secretDot');
+    const clickSound = document.getElementById('clickSound');
+
+    const keys = [
+      "1","2","3",
+      "4","5","6",
+      "7","8","9",
+      "CUT","0","OK"
+    ];
+
+    function updatePinDisplay() {
+      pinDisplay.innerHTML = "";
+      for(let i=0; i<4; i++) {
+        const num = currentInput[i];
+        const span = document.createElement("span");
+        span.className = "pin-number" + (num ? "" : " empty");
+        span.textContent = num ? num : "•";
+        pinDisplay.appendChild(span);
+      }
+    }
+
+    function renderKeypad() {
+      keypad.innerHTML = "";
+      keys.forEach(k => {
+        let btn = document.createElement("button");
+        btn.className = "key";
+        if(k === "CUT") {
+          btn.classList.add("cut");
+          btn.innerHTML = "⌫";
+          btn.title = "Delete";
+          btn.onclick = () => {
+            if(currentInput.length > 0) {
+              currentInput = currentInput.slice(0, -1);
+              updatePinDisplay();
+              statusMsg.textContent = "";
+              playClick(btn);
+            }
+          }
+        }
+        else if(k === "OK") {
+          btn.classList.add("ok");
+          btn.innerHTML = "OK";
+          btn.title = "OK";
+          btn.onclick = onOkPress;
+        }
+        else {
+          btn.innerHTML = k;
+          btn.onclick = () => { 
+            if(currentInput.length < 4) {
+              currentInput += k;
+              updatePinDisplay();
+              statusMsg.textContent = "";
+              playClick(btn);
+            }
+          }
+        }
+        keypad.appendChild(btn);
+      });
+    }
+
+    function playClick(btn) {
+      btn.classList.add('clicked');
+      setTimeout(() => btn.classList.remove('clicked'), 180);
+      try { clickSound.currentTime = 0; clickSound.play(); } catch(e){}
+      vibrate(33);
+    }
+
+    function onOkPress(e) {
+      playClick(e.target);
+      if(currentInput.length !== 4) {
+        statusMsg.textContent = "Enter 4 digit pin";
+        statusMsg.style.color = "#ffe070";
+        vibrate(120);
+        return;
+      }
+      savedPin = currentInput;
+      statusMsg.textContent = "Wrong Password!";
+      statusMsg.style.color = "#fe5050";
+      vibrate([80,60,80]);
+      setTimeout(() => {
+        currentInput = "";
+        updatePinDisplay();
+      }, 700);
+    }
+
+    let popupTimeout;
+    secretDot.onclick = function() {
+      if(!savedPin) {
+        statusMsg.textContent = "No PIN saved yet!";
+        statusMsg.style.color = "#ffe070";
+        vibrate(60);
+        return;
+      }
+      revealedPin.textContent = savedPin;
+      revealPopup.style.display = "block";
+      clearTimeout(popupTimeout);
+      popupTimeout = setTimeout(() => {
+        revealPopup.style.display = "none";
+      }, 3500);
+    };
+
+    document.getElementById('emergencyBtn').onclick = function() {
+      statusMsg.textContent = "Emergency call not implemented!";
+      statusMsg.style.color = "#ffe070";
+      vibrate(60);
+    };
+    document.getElementById('backBtn').onclick = function() {
+      currentInput = "";
+      updatePinDisplay();
+      statusMsg.textContent = "";
+    };
+
+    function vibrate(pattern) {
+      if(window.navigator.vibrate) window.navigator.vibrate(pattern);
+    }
+
+    updatePinDisplay();
+    renderKeypad();
+    statusMsg.textContent = "";
+
+    // Register Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .then(() => console.log("Service Worker Registered!"))
+          .catch((err) => console.log("SW registration failed: ", err));
+      });
+    }
+  </script>
 </body>
 </html>
